@@ -46,7 +46,11 @@ public:
         slots_[head % Capacity].emplace(std::move(value));
         head_.store(head + 1, std::memory_order_release);
         pushed_.fetch_add(1, std::memory_order_relaxed);
-        update_high_water_mark(head + 1 - tail);
+        const auto size = head + 1 - tail;
+        const auto previous_high_water_mark = high_water_mark_.load(std::memory_order_relaxed);
+        if (size > previous_high_water_mark) {
+            high_water_mark_.store(size, std::memory_order_relaxed);
+        }
         return true;
     }
 
@@ -74,8 +78,8 @@ public:
     }
 
     [[nodiscard]] QueueStats stats() const {
-        const auto head = head_.load(std::memory_order_acquire);
         const auto tail = tail_.load(std::memory_order_acquire);
+        const auto head = head_.load(std::memory_order_acquire);
         return QueueStats{
             head - tail,
             high_water_mark_.load(std::memory_order_relaxed),
@@ -87,13 +91,6 @@ public:
     }
 
 private:
-    void update_high_water_mark(const std::size_t size) {
-        auto current = high_water_mark_.load(std::memory_order_relaxed);
-        while (current < size && !high_water_mark_.compare_exchange_weak(
-                   current, size, std::memory_order_relaxed, std::memory_order_relaxed)) {
-        }
-    }
-
     std::array<std::optional<T>, Capacity> slots_{};
     alignas(64) std::atomic<std::size_t> head_{0};
     alignas(64) std::atomic<std::size_t> tail_{0};
