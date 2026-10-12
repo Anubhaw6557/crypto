@@ -1,3 +1,4 @@
 /build/
 /.cache/
+/.prometheus-data/
 compile_commands.json
