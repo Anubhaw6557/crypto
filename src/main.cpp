@@ -37,6 +37,17 @@ const char* signal_name(const crypto::SignalAction action) {
     }
     return "UNKNOWN";
 }
+
+std::string signal_summary(const crypto::Signal& signal) {
+    return "seq=" + std::to_string(signal.sequence_id) +
+        " pair=" + signal.symbol_pair +
+        " action=" + signal_name(signal.action) +
+        " z=" + std::to_string(signal.z_score) +
+        " btc=" + std::to_string(signal.btc_reference_price) +
+        " eth=" + std::to_string(signal.eth_reference_price) +
+        " valid=" + (signal.market_data_valid ? "true" : "false") +
+        " config=" + signal.configuration_version;
+}
 }
 
 int main(int argc, char* argv[]) {
@@ -137,8 +148,7 @@ int main(int argc, char* argv[]) {
                 }
                 const auto signal = strategy.observe(btc_price, eth_price, std::chrono::system_clock::now(), now);
                 if (signal) {
-                    crypto::log(crypto::LogLevel::info, "strategy", std::string(signal_name(signal->action)) +
-                        " z=" + std::to_string(signal->z_score));
+                    crypto::log(crypto::LogLevel::info, "strategy", signal_summary(*signal));
                 }
                 next_strategy_sample = now + std::chrono::milliseconds(config.sampling_interval_ms);
             }
