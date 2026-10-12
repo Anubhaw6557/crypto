@@ -3,6 +3,7 @@
 #include "crypto/binance_rest.hpp"
 #include "crypto/logger.hpp"
 #include "crypto/mean_reversion.hpp"
+#include "crypto/metrics.hpp"
 #include "crypto/order_book.hpp"
 
 #include <atomic>
@@ -12,6 +13,7 @@
 #include <csignal>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -80,14 +82,20 @@ int main(int argc, char* argv[]) {
         }
         crypto::log(crypto::LogLevel::info, "startup", run_live ? "starting live Binance market-data feed" : "configuration loaded");
         crypto::SpscQueue<crypto::DepthUpdate, 4096> updates;
+        crypto::Metrics metrics(config.symbols);
+        crypto::MetricsHttpServer metrics_server(metrics, config.metrics_port);
         std::map<std::string, crypto::OrderBook> books;
         crypto::MeanReversionStrategy strategy{
             config.strategy_pair, config.beta, config.rolling_window,
             config.entry_threshold, config.exit_threshold};
         std::thread feed_thread;
+        std::thread metrics_thread;
         if (run_live) {
-            feed_thread = std::thread([&config, &updates]() {
-                crypto::BinanceFeed{}.run(config, updates, shutdown_requested);
+            metrics_thread = std::thread([&metrics_server]() {
+                metrics_server.run(shutdown_requested);
+            });
+            feed_thread = std::thread([&config, &updates, &metrics]() {
+                crypto::BinanceFeed{}.run(config, updates, shutdown_requested, &metrics);
             });
             for (const auto& symbol : config.symbols) {
                 auto [book, inserted] = books.emplace(symbol, crypto::OrderBook{symbol});
@@ -98,6 +106,9 @@ int main(int argc, char* argv[]) {
                     updates.close();
                     if (feed_thread.joinable()) {
                         feed_thread.join();
+                    }
+                    if (metrics_thread.joinable()) {
+                        metrics_thread.join();
                     }
                     throw std::runtime_error("unable to initialize order book for " + symbol);
                 }
@@ -110,21 +121,28 @@ int main(int argc, char* argv[]) {
         while (!run_once && !shutdown_requested.load()) {
             crypto::DepthUpdate update;
             while (updates.try_pop(update)) {
+                const auto queue_wait = std::chrono::steady_clock::now() - update.received_at;
+                metrics.observe_queue_wait(queue_wait);
                 const auto book = books.find(update.symbol);
                 if (book == books.end()) {
                     crypto::log(crypto::LogLevel::warning, "order-book", "received update for unknown symbol " + update.symbol);
                     continue;
                 }
+                const auto book_update_start = std::chrono::steady_clock::now();
                 const auto result = book->second.apply_update(update);
+                metrics.observe_book_update(std::chrono::steady_clock::now() - book_update_start);
                 if (result == crypto::BookUpdateResult::applied) {
+                    metrics.book_update(update.symbol);
                     const auto mid_price = book->second.mid_price();
                     crypto::log(crypto::LogLevel::info, "order-book", update.symbol + " updated mid=" + std::to_string(mid_price.value_or(0.0)));
                 } else if (result == crypto::BookUpdateResult::sequence_gap) {
+                    metrics.sequence_gap(update.symbol);
                     crypto::log(crypto::LogLevel::warning, "order-book", update.symbol + " sequence gap; book_id=" +
                         std::to_string(book->second.last_update_id()) + " update_range=" +
                         std::to_string(update.first_update_id) + "-" + std::to_string(update.final_update_id));
                     crypto::BookSnapshot recovery_snapshot;
                     if (crypto::fetch_snapshot(update.symbol, recovery_snapshot) && book->second.apply_snapshot(recovery_snapshot)) {
+                        metrics.recovery(update.symbol);
                         crypto::log(crypto::LogLevel::info, "order-book", update.symbol + " recovered from REST snapshot");
                     } else {
                         crypto::log(crypto::LogLevel::warning, "order-book", update.symbol + " REST recovery failed");
@@ -135,7 +153,10 @@ int main(int argc, char* argv[]) {
             }
 
             const auto now = std::chrono::steady_clock::now();
+            const auto queue_stats = updates.stats();
+            metrics.set_queue_stats(queue_stats.size, queue_stats.high_water_mark, queue_stats.overflows);
             if (run_live && now >= next_strategy_sample) {
+                metrics.strategy_sample();
                 std::optional<double> btc_price;
                 std::optional<double> eth_price;
                 const auto btc = books.find("BTCUSDT");
@@ -146,8 +167,11 @@ int main(int argc, char* argv[]) {
                 if (eth != books.end() && eth->second.is_fresh(now, std::chrono::seconds(5))) {
                     eth_price = eth->second.mid_price();
                 }
+                const auto strategy_start = std::chrono::steady_clock::now();
                 const auto signal = strategy.observe(btc_price, eth_price, std::chrono::system_clock::now(), now);
+                metrics.observe_strategy(std::chrono::steady_clock::now() - strategy_start);
                 if (signal) {
+                    metrics.signal(signal_name(signal->action));
                     crypto::log(crypto::LogLevel::info, "strategy", signal_summary(*signal));
                 }
                 next_strategy_sample = now + std::chrono::milliseconds(config.sampling_interval_ms);
@@ -157,6 +181,9 @@ int main(int argc, char* argv[]) {
         updates.close();
         if (feed_thread.joinable()) {
             feed_thread.join();
+        }
+        if (metrics_thread.joinable()) {
+            metrics_thread.join();
         }
         crypto::log(crypto::LogLevel::info, "shutdown", "service stopped");
         return EXIT_SUCCESS;

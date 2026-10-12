@@ -17,6 +17,7 @@ struct Config {
     double entry_threshold{2.0};
     double exit_threshold{0.5};
     std::uint16_t signal_port{9000};
+    std::uint16_t metrics_port{9100};
     std::string log_level{"info"};
 
     static Config defaults();

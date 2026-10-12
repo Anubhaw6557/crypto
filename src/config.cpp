@@ -98,6 +98,8 @@ Config Config::load(const std::filesystem::path& path) {
                 config.exit_threshold = std::stod(value);
             } else if (key == "signal_port") {
                 config.signal_port = static_cast<std::uint16_t>(std::stoul(value));
+            } else if (key == "metrics_port") {
+                config.metrics_port = static_cast<std::uint16_t>(std::stoul(value));
             } else if (key == "log_level") {
                 config.log_level = unquote(value);
             }
@@ -125,6 +127,9 @@ void Config::validate() const {
     }
     if (signal_port == 0) {
         throw std::invalid_argument("signal port must be non-zero");
+    }
+    if (metrics_port == 0) {
+        throw std::invalid_argument("metrics port must be non-zero");
     }
 }
 

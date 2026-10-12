@@ -28,6 +28,7 @@ add_library(crypto_core
     src/config.cpp
     src/logger.cpp
     src/mean_reversion.cpp
+    src/metrics.cpp
     src/order_book.cpp
 )
 
@@ -71,4 +72,8 @@ if(BUILD_TESTING)
     add_executable(crypto_mean_reversion_test tests/mean_reversion_test.cpp)
     target_link_libraries(crypto_mean_reversion_test PRIVATE crypto_core)
     add_test(NAME crypto_mean_reversion_test COMMAND crypto_mean_reversion_test)
+
+    add_executable(crypto_metrics_test tests/metrics_test.cpp)
+    target_link_libraries(crypto_metrics_test PRIVATE crypto_core)
+    add_test(NAME crypto_metrics_test COMMAND crypto_metrics_test)
 endif()

@@ -1,0 +1,64 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Queue Depth",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "crypto_queue_depth", "refId": "A"}],
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "type": "stat",
+      "title": "Queue Overflows",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "crypto_queue_overflows", "refId": "A"}],
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Order-book Updates / Second",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "sum(rate(crypto_order_book_updates_total[1m])) by (symbol)", "legendFormat": "{{symbol}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+    },
+    {
+      "type": "timeseries",
+      "title": "Book Update Latency p95",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "histogram_quantile(0.95, rate(crypto_book_update_seconds_bucket[5m]))", "legendFormat": "p95", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Wait Latency p95",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "histogram_quantile(0.95, rate(crypto_queue_wait_seconds_bucket[5m]))", "legendFormat": "p95", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+    },
+    {
+      "type": "timeseries",
+      "title": "Sequence Gaps and Recoveries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {"expr": "sum(rate(crypto_sequence_gaps_total[5m])) by (symbol)", "legendFormat": "gaps {{symbol}}", "refId": "A"},
+        {"expr": "sum(rate(crypto_recoveries_total[5m])) by (symbol)", "legendFormat": "recoveries {{symbol}}", "refId": "B"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+    },
+    {
+      "type": "timeseries",
+      "title": "Signals by Action",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [{"expr": "rate(crypto_signals_total[5m])", "legendFormat": "{{action}}", "refId": "A"}],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20}
+    }
+  ],
+  "schemaVersion": 39,
+  "templating": {"list": []},
+  "title": "Crypto Signal Engine",
+  "time": {"from": "now-15m", "to": "now"},
+  "timezone": "browser",
+  "version": 1
+}

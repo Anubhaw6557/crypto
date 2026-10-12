@@ -6,4 +6,5 @@ rolling_window = 1000
 entry_threshold = 2.0
 exit_threshold = 0.5
 signal_port = 9000
+metrics_port = 9100
 log_level = "info"

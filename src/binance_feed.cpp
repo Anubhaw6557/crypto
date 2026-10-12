@@ -46,7 +46,8 @@ std::string stream_target(const Config& config) {
     return target.str();
 }
 
-void connect_and_read(const Config& config, SpscQueue<DepthUpdate, 4096>& updates, const std::atomic_bool& stop_requested) {
+void connect_and_read(const Config& config, SpscQueue<DepthUpdate, 4096>& updates,
+                      const std::atomic_bool& stop_requested, Metrics* metrics) {
     asio::io_context io_context;
     asio::ssl::context tls_context{asio::ssl::context::tls_client};
     tls_context.set_default_verify_paths();
@@ -76,10 +77,20 @@ void connect_and_read(const Config& config, SpscQueue<DepthUpdate, 4096>& update
         const auto payload = beast::buffers_to_string(buffer.data());
         DepthUpdate update;
         if (!parse_binance_depth(payload, update, std::chrono::steady_clock::now())) {
+            if (metrics != nullptr) {
+                metrics->parse_failure("unknown");
+            }
             log(LogLevel::warning, "feed", "discarded invalid Binance depth message");
             continue;
         }
+        if (metrics != nullptr) {
+            metrics->feed_message(update.symbol);
+        }
+        const auto symbol = update.symbol;
         if (!updates.try_push(std::move(update))) {
+            if (metrics != nullptr) {
+                metrics->queue_overflow(symbol);
+            }
             log(LogLevel::warning, "feed", "depth update queue is full");
         }
     }
@@ -90,10 +101,11 @@ void connect_and_read(const Config& config, SpscQueue<DepthUpdate, 4096>& update
 
 }
 
-void BinanceFeed::run(const Config& config, SpscQueue<DepthUpdate, 4096>& updates, const std::atomic_bool& stop_requested) const {
+void BinanceFeed::run(const Config& config, SpscQueue<DepthUpdate, 4096>& updates,
+                      const std::atomic_bool& stop_requested, Metrics* metrics) const {
     while (!stop_requested.load()) {
         try {
-            connect_and_read(config, updates, stop_requested);
+            connect_and_read(config, updates, stop_requested, metrics);
         } catch (const std::exception& error) {
             log(LogLevel::warning, "feed", std::string{"Binance connection stopped: "} + error.what());
             if (!stop_requested.load()) {
