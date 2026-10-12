@@ -2,7 +2,7 @@
 
 ## Objective
 
-Build a modular, low-latency C++20 service that consumes Binance Spot market data, maintains local order books, generates experimental online BTC/ETH mean-reversion signals, and publishes those signals to external observers over TCP.
+Build a clear, placement-focused C++20 service that consumes Binance Spot market data, maintains local order books, generates experimental online BTC/ETH mean-reversion signals, and logs those signals for observation.
 
 The system does not place orders, manage exchange execution, backtest historical data, or claim profitability.
 
@@ -13,16 +13,16 @@ The system does not place orders, manage exchange execution, backtest historical
 - [ ] BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, and XRPUSDT feeds can connect, reconnect, and recover.
 - [ ] Each symbol has a sequence-validated local order book with freshness and validity state.
 - [ ] BTC/ETH sampling, warm-up, rolling statistics, stateful signals, and suppression rules are tested.
-- [ ] Multiple TCP observers receive versioned newline-delimited JSON without blocking feed processing.
+- [x] Generated signals are visible in the server logs with action, z-score, and validity.
 - [ ] Prometheus metrics, Grafana dashboards, benchmarks, stress tests, and profiling instructions are included.
-- [ ] No code path submits exchange orders or treats TCP write completion as observer receipt.
+- [x] No code path submits exchange orders.
 
 ## Technology and Constraints
 
 - [ ] C++20, CMake, Boost.Asio, Boost.Beast, OpenSSL, simdjson, toml++, spdlog.
 - [ ] prometheus-cpp for metrics, Catch2 for unit tests, Google Benchmark for benchmarks, Linux `perf` for profiling.
 - [ ] Use monotonic clocks for elapsed-time measurements and wall-clock timestamps only for external event time.
-- [ ] Keep market-data processing independent from observer I/O and bound every queue.
+- [x] Keep market-data processing independent from signal logging and bound the market-data queue.
 - [ ] Make exchange endpoints, credentials if ever added, symbols, intervals, thresholds, and limits configurable.
 
 ## Phase 0: Repository and Foundation
@@ -92,40 +92,35 @@ The system does not place orders, manage exchange execution, backtest historical
 
 **Acceptance:** Deterministic tests demonstrate every state transition and prove invalid inputs cannot create entry signals.
 
-## Phase 5: TCP Signal Service
+## Phase 5: Local Signal Output
 
-- [ ] Define versioned newline-delimited JSON for signals and health events.
-- [ ] Implement an asynchronous Boost.Asio TCP listener with multiple simultaneous observers.
-- [ ] Give each client an independent bounded outbound queue and write strand/executor.
-- [ ] Ensure slow, disconnected, or overflowing clients cannot block market-data or strategy threads.
-- [ ] Define and test client overflow behavior, disconnect cleanup, partial writes, and reconnects.
-- [ ] Add connection, backlog, overflow, write-duration, and write-error metrics.
-- [ ] Document that successful TCP write completion only means the kernel accepted the bytes.
-- [ ] Add protocol and failure tests with local fake clients.
+- [x] Log each generated signal with action, z-score, reference prices, and market-data validity.
+- [ ] Add a readable signal summary mode for demonstrations and placement presentations.
+- [ ] Add tests covering signal formatting and health output.
 
-**Acceptance:** A slow client is isolated while healthy clients continue receiving ordered messages and the producer remains responsive.
+**Acceptance:** A live run displays generated signals and health events in the server log without blocking market-data processing.
 
 ## Phase 6: Observability and Operations
 
-- [ ] Instrument receive, parse, queue, book update, strategy evaluation, signal creation, and TCP write stages.
+- [ ] Instrument receive, parse, queue, book update, strategy evaluation, signal creation, and log output stages.
 - [ ] Record feed-to-signal and signal-to-write latency histograms with p50, p95, p99, and maximum views.
 - [ ] Record throughput, queue depth, wait time, high-water marks, and overflows.
 - [ ] Record per-symbol feed age, sequence gaps, reconnects, recovery duration, and current health.
-- [ ] Record order-book duration, strategy duration, client backlog, write duration, errors, CPU, and memory.
+- [ ] Record order-book duration, strategy duration, signal counts, errors, CPU, and memory.
 - [ ] Expose Prometheus metrics on a separate local HTTP endpoint with bounded label cardinality.
-- [ ] Add Grafana dashboards for feed health, latency, throughput, queues, books, strategy, and observers.
-- [ ] Add runbooks for stale feeds, sequence recovery, observer overload, and graceful shutdown.
+- [ ] Add Grafana dashboards for feed health, latency, throughput, queues, books, and strategy.
+- [ ] Add runbooks for stale feeds, sequence recovery, and graceful shutdown.
 
 **Acceptance:** A local run produces useful metrics and dashboards without exposing secrets or unbounded per-event labels.
 
 ## Phase 7: Performance, Reliability, and Release
 
 - [ ] Add Google Benchmarks for parsing, order-book updates, rolling statistics, queues, and signal publication.
-- [ ] Add load tests for all five symbols, bursty updates, reconnect storms, and many observers.
+- [ ] Add load tests for all five symbols, bursty updates, and reconnect storms.
 - [ ] Measure end-to-end latency and report p50, p95, p99, maximum, throughput, and drop/overflow counts.
 - [ ] Profile representative workloads with Linux `perf` and document reproducible commands.
 - [ ] Run AddressSanitizer, UndefinedBehaviorSanitizer, and ThreadSanitizer test jobs where compatible.
-- [ ] Test controlled shutdown, network loss, malformed data, sequence gaps, REST failures, and TCP failures.
+- [ ] Test controlled shutdown, network loss, malformed data, sequence gaps, and REST failures.
 - [ ] Add CI for build, unit tests, static checks, sanitizers, and benchmark smoke tests.
 - [ ] Review resource limits, logging volume, configuration secrets, and operational defaults.
 - [ ] Write a final architecture document and explicitly record known strategy limitations.
@@ -150,3 +145,4 @@ The system does not place orders, manage exchange execution, backtest historical
 - Historical backtesting or historical strategy research.
 - Private exchange trading APIs.
 - Profitability claims without independent validation.
+- TCP signal observers; signals are logged locally for this placement-focused scope.
