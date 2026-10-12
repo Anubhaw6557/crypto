@@ -17,6 +17,7 @@ if(ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 add_library(crypto_core
+    src/binance_parser.cpp
     src/config.cpp
     src/logger.cpp
 )
@@ -43,4 +44,8 @@ if(BUILD_TESTING)
     add_executable(crypto_contracts_queue_test tests/contracts_queue_test.cpp)
     target_link_libraries(crypto_contracts_queue_test PRIVATE crypto_core)
     add_test(NAME crypto_contracts_queue_test COMMAND crypto_contracts_queue_test)
+
+    add_executable(crypto_binance_parser_test tests/binance_parser_test.cpp)
+    target_link_libraries(crypto_binance_parser_test PRIVATE crypto_core)
+    add_test(NAME crypto_binance_parser_test COMMAND crypto_binance_parser_test)
 endif()
