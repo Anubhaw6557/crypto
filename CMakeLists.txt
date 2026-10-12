@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Boost REQUIRED)
+find_package(CURL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -23,6 +24,7 @@ endif()
 add_library(crypto_core
     src/binance_feed.cpp
     src/binance_parser.cpp
+    src/binance_rest.cpp
     src/config.cpp
     src/logger.cpp
     src/order_book.cpp
@@ -30,7 +32,7 @@ add_library(crypto_core
 
 target_include_directories(crypto_core PUBLIC include ${Boost_INCLUDE_DIRS})
 target_compile_definitions(crypto_core PUBLIC BOOST_ERROR_CODE_HEADER_ONLY BOOST_SYSTEM_NO_DEPRECATED)
-target_link_libraries(crypto_core PUBLIC OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+target_link_libraries(crypto_core PUBLIC CURL::libcurl OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 
 if(ENABLE_WARNINGS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(crypto_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion)
@@ -60,4 +62,8 @@ if(BUILD_TESTING)
     add_executable(crypto_order_book_test tests/order_book_test.cpp)
     target_link_libraries(crypto_order_book_test PRIVATE crypto_core)
     add_test(NAME crypto_order_book_test COMMAND crypto_order_book_test)
+
+    add_executable(crypto_rest_snapshot_test tests/binance_rest_test.cpp)
+    target_link_libraries(crypto_rest_snapshot_test PRIVATE crypto_core)
+    add_test(NAME crypto_rest_snapshot_test COMMAND crypto_rest_snapshot_test)
 endif()
