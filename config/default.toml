@@ -1,0 +1,9 @@
+symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]
+strategy_pair = "BTCUSDT/ETHUSDT"
+sampling_interval_ms = 1000
+beta = 1.0
+rolling_window = 1000
+entry_threshold = 2.0
+exit_threshold = 0.5
+signal_port = 9000
+log_level = "info"

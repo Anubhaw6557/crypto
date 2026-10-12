@@ -27,15 +27,15 @@ The system does not place orders, manage exchange execution, backtest historical
 
 ## Phase 0: Repository and Foundation
 
-- [ ] Add a top-level `CMakeLists.txt` with Debug, Release, and sanitizer options.
-- [ ] Create `src/`, `include/`, `tests/`, `benchmarks/`, `config/`, `deploy/`, `dashboards/`, and `docs/` directories.
+- [x] Add a top-level `CMakeLists.txt` with Debug, Release, and sanitizer options.
+- [x] Create `src/`, `include/`, `tests/`, `benchmarks/`, `config/`, `deploy/`, `dashboards/`, and `docs/` directories.
 - [ ] Add dependency discovery and pin/document supported library versions.
 - [ ] Define module boundaries: `feed`, `orderbook`, `strategy`, `transport`, `observability`, and `common`.
 - [ ] Add a typed TOML configuration with validation and safe defaults.
 - [ ] Add structured logging with severity, component, symbol, and correlation fields.
 - [ ] Add signal handling, bounded shutdown, and clear startup failure messages.
-- [ ] Add a minimal executable that starts, reports health, and shuts down cleanly.
-- [ ] Add formatting, compiler warnings, and a test target to the default build.
+- [x] Add a minimal executable that starts, reports health, and shuts down cleanly.
+- [x] Add formatting, compiler warnings, and a test target to the default build.
 
 **Acceptance:** A clean checkout configures, builds, runs its smoke test, and exits cleanly without network access.
 
