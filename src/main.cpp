@@ -133,8 +133,6 @@ int main(int argc, char* argv[]) {
                 metrics.observe_book_update(std::chrono::steady_clock::now() - book_update_start);
                 if (result == crypto::BookUpdateResult::applied) {
                     metrics.book_update(update.symbol);
-                    const auto mid_price = book->second.mid_price();
-                    crypto::log(crypto::LogLevel::info, "order-book", update.symbol + " updated mid=" + std::to_string(mid_price.value_or(0.0)));
                 } else if (result == crypto::BookUpdateResult::sequence_gap) {
                     metrics.sequence_gap(update.symbol);
                     crypto::log(crypto::LogLevel::warning, "order-book", update.symbol + " sequence gap; book_id=" +
