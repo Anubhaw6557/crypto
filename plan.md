@@ -41,11 +41,11 @@ The system does not place orders, manage exchange execution, backtest historical
 
 ## Phase 1: Shared Data Contracts and Queues
 
-- [ ] Define normalized market-data types for depth updates, snapshots, timestamps, and feed health.
-- [ ] Define immutable signal and health-status types with schema/version fields.
-- [ ] Implement a bounded SPSC ring buffer with explicit overflow behavior and metrics hooks.
-- [ ] Add tests for FIFO ordering, capacity boundaries, empty/full behavior, and shutdown behavior.
-- [ ] Document thread ownership and permitted transitions for every cross-thread queue.
+- [x] Define normalized market-data types for depth updates, snapshots, timestamps, and feed health.
+- [x] Define immutable signal and health-status types with schema/version fields.
+- [x] Implement a bounded SPSC ring buffer with explicit overflow behavior and metrics hooks.
+- [x] Add tests for FIFO ordering, capacity boundaries, empty/full behavior, and shutdown behavior.
+- [x] Document thread ownership and permitted transitions for every cross-thread queue.
 
 **Acceptance:** Queue and data-contract tests pass under ThreadSanitizer where supported.
 

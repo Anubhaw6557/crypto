@@ -39,4 +39,8 @@ if(BUILD_TESTING)
     add_executable(crypto_smoke_test tests/smoke_test.cpp)
     target_link_libraries(crypto_smoke_test PRIVATE crypto_core)
     add_test(NAME crypto_smoke_test COMMAND crypto_smoke_test)
+
+    add_executable(crypto_contracts_queue_test tests/contracts_queue_test.cpp)
+    target_link_libraries(crypto_contracts_queue_test PRIVATE crypto_core)
+    add_test(NAME crypto_contracts_queue_test COMMAND crypto_contracts_queue_test)
 endif()
