@@ -25,6 +25,7 @@ add_library(crypto_core
     src/binance_parser.cpp
     src/config.cpp
     src/logger.cpp
+    src/order_book.cpp
 )
 
 target_include_directories(crypto_core PUBLIC include ${Boost_INCLUDE_DIRS})
@@ -55,4 +56,8 @@ if(BUILD_TESTING)
     add_executable(crypto_binance_parser_test tests/binance_parser_test.cpp)
     target_link_libraries(crypto_binance_parser_test PRIVATE crypto_core)
     add_test(NAME crypto_binance_parser_test COMMAND crypto_binance_parser_test)
+
+    add_executable(crypto_order_book_test tests/order_book_test.cpp)
+    target_link_libraries(crypto_order_book_test PRIVATE crypto_core)
+    add_test(NAME crypto_order_book_test COMMAND crypto_order_book_test)
 endif()
