@@ -11,18 +11,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
+
 if(ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
 add_library(crypto_core
+    src/binance_feed.cpp
     src/binance_parser.cpp
     src/config.cpp
     src/logger.cpp
 )
 
-target_include_directories(crypto_core PUBLIC include)
+target_include_directories(crypto_core PUBLIC include ${Boost_INCLUDE_DIRS})
+target_compile_definitions(crypto_core PUBLIC BOOST_ERROR_CODE_HEADER_ONLY BOOST_SYSTEM_NO_DEPRECATED)
+target_link_libraries(crypto_core PUBLIC OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 
 if(ENABLE_WARNINGS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(crypto_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion)
