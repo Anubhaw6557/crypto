@@ -2,6 +2,7 @@
 #include "crypto/config.hpp"
 #include "crypto/binance_rest.hpp"
 #include "crypto/logger.hpp"
+#include "crypto/mean_reversion.hpp"
 #include "crypto/order_book.hpp"
 
 #include <atomic>
@@ -21,6 +22,20 @@ std::atomic_bool shutdown_requested{false};
 
 void request_shutdown(int) {
     shutdown_requested.store(true);
+}
+
+const char* signal_name(const crypto::SignalAction action) {
+    switch (action) {
+    case crypto::SignalAction::enter_long_spread:
+        return "ENTER_LONG_SPREAD";
+    case crypto::SignalAction::enter_short_spread:
+        return "ENTER_SHORT_SPREAD";
+    case crypto::SignalAction::exit_spread:
+        return "EXIT_SPREAD";
+    case crypto::SignalAction::health:
+        return "HEALTH";
+    }
+    return "UNKNOWN";
 }
 }
 
@@ -55,6 +70,9 @@ int main(int argc, char* argv[]) {
         crypto::log(crypto::LogLevel::info, "startup", run_live ? "starting live Binance market-data feed" : "configuration loaded");
         crypto::SpscQueue<crypto::DepthUpdate, 4096> updates;
         std::map<std::string, crypto::OrderBook> books;
+        crypto::MeanReversionStrategy strategy{
+            config.strategy_pair, config.beta, config.rolling_window,
+            config.entry_threshold, config.exit_threshold};
         std::thread feed_thread;
         if (run_live) {
             feed_thread = std::thread([&config, &updates]() {
@@ -76,6 +94,7 @@ int main(int argc, char* argv[]) {
             }
         }
         crypto::log(crypto::LogLevel::info, "health", run_once ? "foundation smoke run healthy" : "foundation running");
+        auto next_strategy_sample = std::chrono::steady_clock::now();
 
         while (!run_once && !shutdown_requested.load()) {
             crypto::DepthUpdate update;
@@ -102,6 +121,26 @@ int main(int argc, char* argv[]) {
                 } else if (result == crypto::BookUpdateResult::invalid_update) {
                     crypto::log(crypto::LogLevel::warning, "order-book", update.symbol + " invalid update");
                 }
+            }
+
+            const auto now = std::chrono::steady_clock::now();
+            if (run_live && now >= next_strategy_sample) {
+                std::optional<double> btc_price;
+                std::optional<double> eth_price;
+                const auto btc = books.find("BTCUSDT");
+                const auto eth = books.find("ETHUSDT");
+                if (btc != books.end() && btc->second.is_fresh(now, std::chrono::seconds(5))) {
+                    btc_price = btc->second.mid_price();
+                }
+                if (eth != books.end() && eth->second.is_fresh(now, std::chrono::seconds(5))) {
+                    eth_price = eth->second.mid_price();
+                }
+                const auto signal = strategy.observe(btc_price, eth_price, std::chrono::system_clock::now(), now);
+                if (signal) {
+                    crypto::log(crypto::LogLevel::info, "strategy", std::string(signal_name(signal->action)) +
+                        " z=" + std::to_string(signal->z_score));
+                }
+                next_strategy_sample = now + std::chrono::milliseconds(config.sampling_interval_ms);
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

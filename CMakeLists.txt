@@ -27,6 +27,7 @@ add_library(crypto_core
     src/binance_rest.cpp
     src/config.cpp
     src/logger.cpp
+    src/mean_reversion.cpp
     src/order_book.cpp
 )
 
@@ -66,4 +67,8 @@ if(BUILD_TESTING)
     add_executable(crypto_rest_snapshot_test tests/binance_rest_test.cpp)
     target_link_libraries(crypto_rest_snapshot_test PRIVATE crypto_core)
     add_test(NAME crypto_rest_snapshot_test COMMAND crypto_rest_snapshot_test)
+
+    add_executable(crypto_mean_reversion_test tests/mean_reversion_test.cpp)
+    target_link_libraries(crypto_mean_reversion_test PRIVATE crypto_core)
+    add_test(NAME crypto_mean_reversion_test COMMAND crypto_mean_reversion_test)
 endif()
